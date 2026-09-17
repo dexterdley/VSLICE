@@ -1,0 +1,5 @@
+name: VSLICE
+channels:
+  - https://repo.anaconda.com/pkgs/main
+  - https://repo.anaconda.com/pkgs/r
+prefix: /home/dexterneo/anaconda3/envs/VSLICE
