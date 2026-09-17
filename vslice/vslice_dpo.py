@@ -44,43 +44,6 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-"""
-SUMME: TO BEAT 0.256 0.285, TVSUM: 0.195 0.255
-==================== SPLIT 1/5 ====================
-[Split 1] Test | F-Score: 0.4464 | Tau: 0.1548 | Rho: 0.1723
-[Split 1] Test | F-Score: 0.4600 | Tau: 0.2379 | Rho: 0.2652
-==================== SPLIT 2/5 ====================
-[Split 2] Test | F-Score: 0.5475 | Tau: 0.2793 | Rho: 0.3109
-==================== SPLIT 3/5 ====================
-[Split 3] Test | F-Score: 0.5193 | Tau: 0.2429 | Rho: 0.2687
-==================== SPLIT 4/5 ====================
-[Split 4] Test | F-Score: 0.5311 | Tau: 0.2160 | Rho: 0.2430
-==================== SPLIT 5/5 ====================
-[Split 5] Test | F-Score: 0.5052 | Tau: 0.2333 | Rho: 0.2591
-════════════════════════════════════════════════════════════
-FINAL GLOBAL BENCHMARK SUMMARY (5 SPLITS)
-════════════════════════════════════════════════════════════
-Global Avg | F1: 0.5099 | Kendall: 0.2253 | Spearman: 0.2508 # Base
-Global Avg | F1: 0.5198 | Kendall: 0.2470 | Spearman: 0.2750 # w DPO
-TVSum:
-Global Avg | F1: 0.4788 | Kendall: 0.2438 | Spearman: 0.3118
-
-### CSTA
-# Summe
-Average F-score across 5 splits: 0.5515
-Average Kendall Tau across splits: 0.2532
-Average Spearman Rho across splits: 0.2819
-# TVSum
-Average F-score across 5 splits: 0.5437
-Average Kendall Tau across splits: 0.1925
-Average Spearman Rho across splits: 0.2532
-[Split 1] Test | F-Score: 0.5086 | Tau: 0.2293 | Rho: 0.2561
-[Split 2] Test | F-Score: 0.5368 | Tau: 0.2460 | Rho: 0.2738
-[Split 3] Test | F-Score: 0.7210 | Tau: 0.3915 | Rho: 0.4349
-[Split 4] Test | F-Score: 0.4544 | Tau: 0.1869 | Rho: 0.2100
-[Split 5] Test | F-Score: 0.5321 | Tau: 0.2294 | Rho: 0.2541
-"""
-
 def evaluate(model, val_loader, dataset_name, h5_paths, tvsum_user_scores=None, yes_id=9454, no_id=2753,
              output_dir=None, model_type="minicpm"):
     """

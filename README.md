@@ -48,9 +48,13 @@ Traditional video summarization methods typically rely on supervised regression 
 - **Low Resource Efficiency**: Competitive inference peformance is supported on only NVIDIA RTX 3070 with 8GB memory.
 ---
 
-## 🧠 Algorithmic Architecture
+## 🧠 Proposed Algorithm Methodology
 
-The core algorithm is implemented in [`vslice/vslice_dpo.py`](vslice/vslice_dpo.py). The training and evaluation pipeline proceeds through five key stages:
+The core algorithm is implemented in [`vslice/vslice_dpo.py`](vslice/vslice_dpo.py) (illustrated in the main figure below). The training and evaluation pipeline proceeds through five key stages:
+
+<p align="center">
+  <img src="assets/main_figure.png" alt="VSLICE Overview" width="100%">
+</p>
 
 ```
 Video Dataset (SumMe / TVSum)
@@ -60,8 +64,8 @@ Preference Mining ──► Extract Peak Clips (Chosen) vs. Valley Clips (Reject
        │              Compute Log-Margin: log(y_c + ε) - log(y_r + ε)
        ▼
    VLM Passes:
-   ├─► Frozen Reference Model  ──► ref_logp_c, ref_logp_r (LoRA disabled)
-   └─► Trainable Policy Model  ──► pi_logp_c,  pi_logp_r  (LoRA enabled)
+   ├─► Frozen Reference Model  ──► ref_logp_c, ref_logp_r
+   └─► Trainable Policy Model  ──► pi_logp_c,  pi_logp_r
        │
        ▼
 Compute Implicit Reward:
@@ -69,7 +73,7 @@ Compute Implicit Reward:
    z = β * (Δ - log_margin)
        │
        ▼
-Optimization (DPO / MPO Loss) ──► Update on LoRA layers
+Optimization (DPO / MPO Loss) ──► Update LoRA
        │
        ▼
 Inference & Dynamic Programming (Knapsack) ──► Summary Clips & Benchmark Metrics (F1, Tau, Rho)
@@ -85,11 +89,11 @@ System: "You are an expert video editor. Strictly answer only Yes or No."
 
 The model produces logits for the next generated token. The binary importance score is derived from the difference between the target token logits (`"Yes"` and `"No"`):
 
-$$\text{diff}(x) = \text{logit}(x, \text{"Yes"}) - \text{logit}(x, \text{"No"})$$
+$$\Delta z = z_\text{yes} - z_\text{no}$$
 
 The frame-level predicted probability is:
 
-$$\hat{y}(x) = \sigma(\text{diff}(x)) = \frac{1}{1 + e^{-\text{diff}(x)}}$$
+$$\tilde{\pi}_\theta(y_{\text{yes}} \mid v, x) = \sigma\left(z_\text{yes} - z_\text{no}\right)$$
 
 ### 2. Preference Pair Mining & Ground-Truth Margins
 
@@ -104,33 +108,24 @@ To construct preference pairs from continuous ground-truth frame scores:
 During training, base parameters are frozen. Low-rank adapters are used for parameter-efficient fine-tuning.
 
 1. **Reference Model**:
-   $$\mu_{\text{ratio}} = \log \sigma(\text{diff}_{\text{ref}}(c)) - \log \sigma(\text{diff}_{\text{ref}}(r))$$
+Frozen reference base model $\tilde{\pi}_{\text{ref}}(y \mid v, x)$.
 
 2. **Policy Model**:
-   $$\pi_{\text{ratio}} = \log \sigma(\text{diff}_{\theta}(c)) - \log \sigma(\text{diff}_{\theta}(r))$$
+Policy model $\tilde{\pi}_\theta(y \mid v, x)$.
 
-3. **Margin-Adjusted Logit**:
-   $$z = \beta \cdot \left[ (\pi_{\text{ratio}} - \mu_{\text{ratio}}) - m \right]$$
+3. **Loss Formulations**:
 
-4. **Loss Formulations**:
-   - **Direct Preference Optimization (DPO)**:
-     $$\mathcal{L}_{\text{DPO}} = -\log \sigma(z)$$
-   - **Modulated Preference Optimization (MPO)** (focal modulation):
-     $$\mathcal{L}_{\text{MPO}} = -(1 - \sigma(z))^2 \log \sigma(z)$$
+- **Margin-Ranked Preference Optimization (Margin-DPO)**:
 
----
+$$
+\mathcal{L}_{\text{Margin-DPO}} = -\log \sigma \Bigg( \beta \bigg[ \left( \log \frac{\tilde{\pi}_\theta(y \mid v_c, x)}{\tilde{\pi}_{\text{ref}}(y \mid v_c, x)} \right) - \left( \log \frac{\tilde{\pi}_\theta(y \mid v_r, x)}{\tilde{\pi}_{\text{ref}}(y \mid v_r, x)} \right) - m_{c,r} \bigg] \Bigg)
+$$
 
-## 📊 Benchmark Results
+- **Modulated Preference Optimization (MPO)** (focal modulation):
 
-Evaluated over standard 5-fold cross-validation splits:
-
-| Benchmark | Method | F1-Score | Kendall's $\tau$ | Spearman's $\rho$ |
-| :--- | :--- | :---: | :---: | :---: |
-| **SumMe** | Base Zero-Shot VLM | 0.5099 | 0.2253 | 0.2508 |
-| **SumMe** | **VSLICE (with DPO)** | **0.5198** | **0.2470** | **0.2750** |
-| **TVSum** | **VSLICE (with DPO)** | **0.4788** | **0.2438** | **0.3118** |
-
-*Note: F1-Scores are computed via knapsack 0/1 optimization adhering to the standard 15% summary length constraint against user annotations.*
+$$
+\mathcal{L}_{\text{MPO}} = -\Bigg(1 - \sigma \Bigg( \beta \bigg[ \left( \log \frac{\tilde{\pi}_\theta(y \mid v_c, x)}{\tilde{\pi}_{\text{ref}}(y \mid v_c, x)} \right) - \left( \log \frac{\tilde{\pi}_\theta(y \mid v_r, x)}{\tilde{\pi}_{\text{ref}}(y \mid v_r, x)} \right) - m_{c,r} \bigg] \Bigg)\Bigg)^2 \log \sigma \Bigg( \beta \bigg[ \left( \log \frac{\tilde{\pi}_\theta(y \mid v_c, x)}{\tilde{\pi}_{\text{ref}}(y \mid v_c, x)} \right) - \left( \log \frac{\tilde{\pi}_\theta(y \mid v_r, x)}{\tilde{\pi}_{\text{ref}}(y \mid v_r, x)} \right) - m_{c,r} \bigg] \Bigg)
+$$
 
 ---
 
