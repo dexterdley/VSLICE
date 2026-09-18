@@ -121,7 +121,7 @@ $$
 \mathcal{L}_{\text{Margin-DPO}} = -\log \sigma \Bigg( \beta \bigg[ \left( \log \frac{\tilde{\pi}_\theta(y \mid v_c, x)}{\tilde{\pi}_{\text{ref}}(y \mid v_c, x)} \right) - \left( \log \frac{\tilde{\pi}_\theta(y \mid v_r, x)}{\tilde{\pi}_{\text{ref}}(y \mid v_r, x)} \right) - m_{c,r} \bigg] \Bigg)
 $$
 
-- **Modulated Preference Optimization (MPO)** (focal modulation):
+- **Modulated Preference Optimization (MPO)** (Focal Modulation):
 
 $$
 \mathcal{L}_{\text{MPO}} = -\Bigg(1 - \sigma \Bigg( \beta \bigg[ \left( \log \frac{\tilde{\pi}_\theta(y \mid v_c, x)}{\tilde{\pi}_{\text{ref}}(y \mid v_c, x)} \right) - \left( \log \frac{\tilde{\pi}_\theta(y \mid v_r, x)}{\tilde{\pi}_{\text{ref}}(y \mid v_r, x)} \right) - m_{c,r} \bigg] \Bigg)\Bigg)^2 \log \sigma \Bigg( \beta \bigg[ \left( \log \frac{\tilde{\pi}_\theta(y \mid v_c, x)}{\tilde{\pi}_{\text{ref}}(y \mid v_c, x)} \right) - \left( \log \frac{\tilde{\pi}_\theta(y \mid v_r, x)}{\tilde{\pi}_{\text{ref}}(y \mid v_r, x)} \right) - m_{c,r} \bigg] \Bigg)
