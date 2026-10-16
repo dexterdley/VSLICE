@@ -69,7 +69,7 @@ class TVSumLLaMA_VideoDataset(Dataset):
         # If override_keys is given, use it instead of the split-derived key list
         self._keys = override_keys if override_keys is not None else self.data[self.mode + '_keys']
 
-        self.system_prompt = "You are an expert video editor. Strictly answer only Yes or No."
+        self.system_prompt = "You are an expert video editor. Strictly answer only <SLICE> or <DROP>."
 
     def __len__(self):
         """ Function for the 'len' operator of dataset """
@@ -401,7 +401,7 @@ class TVSumLLaMA_DPODataset(Dataset):
             data = json.loads(f.read())
             self.train_keys = data[split_idx]['train_keys']
 
-        self.system_prompt = "You are an expert video editor. Strictly answer only Yes or No."
+        self.system_prompt = "You are an expert video editor. Strictly answer only <SLICE> or <DROP>."
 
         # Build sub-clips per video
         self.video_pools = []

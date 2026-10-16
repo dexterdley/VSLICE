@@ -19,6 +19,27 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # ──────────────────────── MODEL LOADING ────────────────────────
 
+ACTION_TOKENS = ("<SLICE>", "<DROP>")
+
+def add_action_tokens(model, tokenizers, yes_id, no_id):
+    """Add <SLICE>/<DROP> and alias their embeddings to Yes/No so logits are identical at init."""
+    lm = getattr(model, "llm", model)  # MiniCPM wraps the LLM in .llm
+    for tok in tokenizers:
+        tok.add_special_tokens({"additional_special_tokens": list(ACTION_TOKENS)})
+    tok = tokenizers[0]
+    slice_id, drop_id = tok.convert_tokens_to_ids(ACTION_TOKENS)
+
+    # Qwen pads vocab (151936 > len(tokenizer)), so new ids often fit in spare rows.
+    # Only grow, never call resize unconditionally (it can shrink the matrix).
+    if max(slice_id, drop_id) >= lm.get_input_embeddings().weight.shape[0]:
+        lm.resize_token_embeddings(len(tok))
+
+    with torch.no_grad():
+        for emb in (lm.get_input_embeddings(), lm.get_output_embeddings()):
+            emb.weight[slice_id] = emb.weight[yes_id].clone()
+            emb.weight[drop_id]  = emb.weight[no_id].clone()
+    return slice_id, drop_id
+
 class QwenVLWrapper:
     def __init__(self, model, processor):
         self.model = model
@@ -62,6 +83,8 @@ def load_vlm(model_path, model_type, device, load_in_4bit=False):
         yes_id = tokenizer.encode("Yes", add_special_tokens=False)[0]
         no_id = tokenizer.encode("No", add_special_tokens=False)[0]
         print(f"[{device}] [OK] MiniCPM Loaded (Yes={yes_id}, No={no_id})")
+        yes_id, no_id = add_action_tokens(model, [processor.tokenizer, tokenizer], yes_id, no_id)
+        print(f"[OK] MiniCPM linked new actions to (SLICE={yes_id}, DROP={no_id})")
         return model, tokenizer, processor, yes_id, no_id
 
     elif model_type == "qwen3":
@@ -90,6 +113,8 @@ def load_vlm(model_path, model_type, device, load_in_4bit=False):
         no_id = temp_ids[1][0]
         
         print(f"[{device}] [OK] Qwen VL Loaded (Yes={yes_id}, No={no_id})")
+        yes_id, no_id = add_action_tokens(model, [processor.tokenizer], yes_id, no_id)
+        print(f"[OK] Qwen VL linked new actions to (SLICE={yes_id}, DROP={no_id})")
         return model, processor.tokenizer, processor, yes_id, no_id
 
     elif "qwen2" in model_type:
@@ -119,6 +144,8 @@ def load_vlm(model_path, model_type, device, load_in_4bit=False):
         no_id = temp_ids[1][0]
         
         print(f"[{device}] [OK] Qwen2.5-VL Loaded (Yes={yes_id}, No={no_id})")
+        yes_id, no_id = add_action_tokens(model, [processor.tokenizer], yes_id, no_id)
+        print(f"[OK] Qwen2.5-VL linked new actions to (SLICE={yes_id}, DROP={no_id})")
         return model, processor.tokenizer, processor, yes_id, no_id
 
     elif model_type == "moondream":

@@ -171,7 +171,7 @@ def get_highlight_peaks(gt_np, min_frames=2, num_peaks=10):
 
 def build_dpo_dataset(manifest_data):    
     dpo_entries = []
-    system_prompt = "You are an expert video editor. Strictly answer only Yes or No."
+    system_prompt = "You are an expert video editor. Strictly answer only <SLICE> or <DROP>."
     
     for vid_id, data in manifest_data.items():
         frames = data['frame_paths']
@@ -205,8 +205,8 @@ def build_dpo_dataset(manifest_data):
                     "prompt": prompt,
                     "chosen_image": frames[c],
                     "rejected_image": frames[r],
-                    "chosen_response": "Yes",
-                    "rejected_response": "No",
+                    "chosen_response": "<SLICE>",
+                    "rejected_response": "<DROP>",
                     "chosen_gt": float(gt[c]),
                     "rejected_gt": float(gt[r]),
                     "margin": float(gap),
