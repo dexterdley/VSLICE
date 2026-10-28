@@ -179,35 +179,44 @@
     </div>
   </section>
 
-  <!-- SECTION 1: Motivation -->
+  <!-- SECTION 1: Motivation (figures from vslice/vslice_utils/plot_ranking.py and plot_figures.py) -->
   <section id="motivation">
     <h2><span class="en">1. Introduction &amp; Motivation</span><span class="cn">1. 简介与动机</span></h2>
 
-    <h3><span class="en">The Problem: LVLM Misalignment &amp; Overconfidence</span><span class="cn">问题：LVLM 的不对齐与过度自信</span></h3>
-    <p class="en">Although Large Vision-Language Models (LVLMs) possess strong semantic recognition ability, their raw confidence scores are poorly calibrated for highlight localization. Reliability diagrams reveal that they suffer from massive overconfidence on non-highlight background frames, manifesting as a persistent <strong>Human Misalignment Gap</strong>.</p>
-    <p class="cn">尽管大型视觉语言模型 (LVLM) 具有强大的语义识别能力，但它们的原始置信度分数在精彩片段定位方面的校准效果很差。它们在背景帧上表现出极度的过度自信，导致了巨大的<strong>人类偏好不对齐差距 (Misalignment Gap)</strong>。</p>
+    <h3><span class="en">From Regression to Preference</span><span class="cn">从回归到偏好</span></h3>
+    <p class="en">Video summarization methods typically regress frame-level importance with a mean-squared-error loss or train reinforcement-learning agents. MSE treats every error alike, so it never prioritizes the <em>relative</em> order between key highlights and background clips, and standard vision backbones lack a high-level understanding of a video's theme. Large Vision-Language Models (LVLMs) bring that semantic understanding. VSLICE asks the LVLM one binary question per frame, <em>“Does this image show a key highlight from the video titled ‘{title}’?”</em>, and scores the frame by the gap between its <strong>Yes</strong> and <strong>No</strong> logits.</p>
+    <p class="cn">传统视频摘要方法通常使用均方误差 (MSE) 回归帧级重要性分数，或训练强化学习智能体。MSE 对所有误差一视同仁，无法优先学习关键精彩片段与背景片段之间的<em>相对</em>排序；而标准视觉骨干网络也缺乏对视频主题的高层语义理解。大型视觉语言模型 (LVLM) 恰好具备这种语义理解能力。VSLICE 对每一帧向 LVLM 提出一个二元问题——<em>“这张图像是否展示了标题为‘{title}’的视频中的关键精彩片段？”</em>——并以 <strong>Yes</strong> 与 <strong>No</strong> 逻辑值之差作为该帧的分数。</p>
 
-    <div class="grid cols-3">
+    <h3><span class="en">Recognition Is Not Ranking</span><span class="cn">识别不等于排序</span></h3>
+    <p class="en">Zero-shot LVLMs can tell a clear highlight from obvious background, but a summary is built from the <strong>top-ranked</strong> shots under a length budget, so what matters is fine-grained ordering. On pairs whose human scores differ only slightly, the zero-shot model ranks barely above chance (<strong>54.6%</strong>). Aligning it with margin-ranked binary preference optimization raises fine-grained accuracy to <strong>75.0%</strong>, and VSLICE stays ahead across the full range of difficulty.</p>
+    <p class="cn">零样本 LVLM 能够区分明显的精彩片段与背景，但摘要是在长度预算下由<strong>排名靠前</strong>的镜头组成的，因此真正关键的是细粒度排序。在人类评分仅有细微差异的片段对上，零样本模型的排序准确率仅略高于随机水平（<strong>54.6%</strong>）。通过间隔排序二元偏好优化进行对齐后，细粒度准确率提升至 <strong>75.0%</strong>，并且在所有难度区间上 VSLICE 均保持领先。</p>
+    <figure class="card figure" style="margin:20px 0">
+      <img src="assets/cvpr_combined_3subplot.png" alt="Recognition vs. ranking gap, accuracy vs. difficulty, and selective prediction" loading="lazy">
+      <figcaption><span class="en">Left: preference accuracy by difficulty tier (fine / moderate / coarse human gap). Centre: accuracy against the true human preference gap. Right: selective prediction, where accuracy is measured on the most confident pairs only.</span><span class="cn">左：按难度分层（细粒度 / 中等 / 粗粒度人类评分差）的偏好准确率。中：准确率随真实人类偏好差的变化。右：选择性预测，仅在置信度最高的片段对上计算准确率。</span></figcaption>
+    </figure>
+
+    <h3><span class="en">Confidence That Means Something</span><span class="cn">有意义的置信度</span></h3>
+    <p class="en">A useful scorer should be most accurate where it is most confident. When we keep only the pairs with the largest predicted score gap, VSLICE's accuracy rises monotonically from <strong>77.5%</strong> to <strong>83.9%</strong>, whereas the zero-shot model's accuracy <em>falls</em> from 68.3% to 64.0%. Its confidence does not track correctness.</p>
+    <p class="cn">一个可靠的打分器应当在最有把握时最准确。当只保留预测分数差最大的片段对时，VSLICE 的准确率从 <strong>77.5%</strong> 单调提升至 <strong>83.9%</strong>，而零样本模型的准确率反而从 68.3% <em>下降</em>到 64.0%——它的置信度与正确性并不一致。</p>
+
+    <h3><span class="en">Fixing Errors Without Breaking What Works</span><span class="cn">修正错误，而不破坏已有能力</span></h3>
+    <div class="grid cols-2" style="align-items:center">
+      <div>
+        <p class="en">Alignment rescues <strong>57.7%</strong> of the pairs the zero-shot model ranked wrongly, while retaining <strong>93.3%</strong> of the pairs it already ranked correctly. VSLICE sharpens the LVLM's existing judgement rather than overwriting it.</p>
+        <p class="cn">对齐后，零样本模型排错的片段对中有 <strong>57.7%</strong> 被纠正，同时其原本排对的片段对中有 <strong>93.3%</strong> 得以保留。VSLICE 是在强化 LVLM 已有的判断力，而不是将其覆盖。</p>
+      </div>
       <figure class="card figure tall" style="margin:0">
-        <img src="assets/fig1_misalignment_real.png" alt="Highlight misalignment" loading="lazy">
-        <figcaption><span class="en">Highlight Misalignment</span><span class="cn">高亮不对齐分析</span></figcaption>
-      </figure>
-      <figure class="card figure tall" style="margin:0">
-        <img src="assets/fig1_reliability_split.png" alt="Reliability diagram" loading="lazy">
-        <figcaption><span class="en">Reliability Diagram (LVLM Overconfidence)</span><span class="cn">可靠性图 (LVLM 过度自信)</span></figcaption>
-      </figure>
-      <figure class="card figure tall" style="margin:0">
-        <img src="assets/fig2_bin_strength.png" alt="Bin-strength plot" loading="lazy">
-        <figcaption><span class="en">Bin-Strength Plot</span><span class="cn">分箱强度图</span></figcaption>
+        <img src="assets/cvpr_fig3_ranking_state_rescue.png" alt="Ranking error rescue flow" loading="lazy">
+        <figcaption><span class="en">Ranking error rescue flow: zero-shot errors that are rescued vs. unresolved, and zero-shot correct pairs that are retained vs. regressed.</span><span class="cn">排序错误纠正流：零样本错误中被纠正与未解决的比例，以及零样本正确对中被保留与退化的比例。</span></figcaption>
       </figure>
     </div>
 
-    <h3><span class="en">The Post-Hoc Smoothing Trap</span><span class="cn">事后平滑陷阱</span></h3>
-    <p class="en">A naive solution to temporal fragmentation is to apply a post-hoc graph or temporal smoothing to the raw logits. However, because the zero-shot policy is fundamentally misaligned, post-hoc smoothing simply <strong>smears the overconfident false positives</strong> across adjacent frames, completely destroying precision.</p>
-    <p class="cn">解决时间碎片化的一种天真方法是对原始逻辑值进行事后的图平滑或时间平滑。然而，由于零样本策略在根本上就是不对齐的，事后平滑只会<strong>将过度自信的误报涂抹</strong>到相邻帧上，从而彻底破坏准确率。</p>
+    <h3><span class="en">Why a Margin?</span><span class="cn">为什么需要间隔？</span></h3>
+    <p class="en">Standard DPO treats every chosen/rejected pair as equally different. VSLICE subtracts the ground-truth log-margin between the two clips from the implicit reward, so pairs with a larger human gap must be separated further. In training, adding the margin reaches a larger separation for less KL drift from the reference model, on both MiniCPM-V and Qwen2-VL.</p>
+    <p class="cn">标准 DPO 将每一组选中/拒绝片段对视为差异相同。VSLICE 在隐式奖励中减去两段片段之间的真实对数间隔，使人类评分差距越大的片段对需要被拉开得越远。训练中，在 MiniCPM-V 与 Qwen2-VL 上，加入间隔后都能以更小的相对参考模型的 KL 漂移获得更大的分离间隔。</p>
     <figure class="card figure" style="margin:20px 0">
-      <img src="assets/fig4_posthoc_graph_failure.png" alt="Post-hoc graph smoothing failure" loading="lazy">
-      <figcaption><span class="en">The Post-Hoc Graph Smoothing Failure</span><span class="cn">事后图平滑失效</span></figcaption>
+      <img src="assets/vslice_combined.png" alt="Training dynamics of DPO with and without margin" loading="lazy">
+      <figcaption><span class="en">Training dynamics of DPO vs. DPO + Margin: loss, KL divergence, separation margin, and KL divergence against separation margin.</span><span class="cn">DPO 与 DPO + 间隔的训练动态：损失、KL 散度、分离间隔，以及 KL 散度相对分离间隔的变化。</span></figcaption>
     </figure>
   </section>
 
