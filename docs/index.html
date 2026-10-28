@@ -4,11 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VSLICE</title>
-<meta name="description" content="VSLICE: Binary Preference Alignment for Open-Ended Video Summarization with Large Vision-Language Models">
+<meta name="description" content="<SLICE> or <DROP>: Margin-Ranked Binary Preference Alignment for Video Summarization with Large Vision-Language Models">
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
 <style>
   /* Palette carried over from the gr.themes.Glass overrides in vslice/app.py */
   :root {
@@ -58,7 +59,8 @@
   .lang-toggle button[aria-pressed="true"] { background: var(--accent); color: #fff; }
 
   .hero { padding: 64px 0 32px; text-align: center; }
-  .hero h1 { font-size: clamp(28px, 4.5vw, 46px); line-height: 1.15; margin: 0 0 16px; }
+  .hero .kicker { color: var(--accent-line); font-weight: 700; letter-spacing: .08em; margin: 0 0 8px; }
+  .hero .title { font-size: clamp(24px, 3.4vw, 38px); font-weight: 700; line-height: 1.2; max-width: 980px; margin: 0 auto 16px; }
   .hero .subtitle { font-size: clamp(17px, 2vw, 22px); color: var(--muted); max-width: 860px; margin: 0 auto 20px; }
   .hero .authors { color: var(--faint); font-size: 16px; margin: 0 0 24px; }
   .chips { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
@@ -75,6 +77,8 @@
   section h3 { font-size: 22px; margin: 32px 0 8px; color: var(--accent-line); }
   section p { max-width: 900px; margin: 0 0 16px; }
   strong { color: #fff; }
+  a { color: var(--accent-line); }
+  code.tok { color: var(--accent-line); font-family: inherit; font-weight: 700; }
 
   .grid { display: grid; gap: 16px; margin: 20px 0; }
   .grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -90,17 +94,28 @@
     background: var(--border); font-size: 14px;
   }
   .card video, .card img { display: block; width: 100%; height: auto; background: #000; }
-  .card.figure img { background: #fff; }
-  .card.figure.tall img { max-height: 360px; object-fit: contain; }
+  figure.card { margin: 20px 0; }
   figcaption { padding: 10px 14px 14px; color: var(--muted); font-size: 15px; }
+  figcaption b { color: var(--text); }
 
-  /* Shown in place of any image/video whose file is missing */
+  /* Paper figures: PNG renders of the paper's PDFs in figures/; click opens full size */
+  a.fig { display: block; background: #fff; cursor: zoom-in; }
+  .card a.fig img { background: #fff; }
+  .card a.fig.scaled img { width: 75%; margin: 0 auto; }
+
+  /* Shown in place of any image/video that cannot be loaded */
   .missing {
     display: flex; flex-direction: column; gap: 6px; align-items: center; justify-content: center; text-align: center;
     min-height: 200px; padding: 16px; color: var(--faint); font-size: 14px;
     background: repeating-linear-gradient(45deg, var(--bg), var(--bg) 10px, var(--surface) 10px, var(--surface) 20px);
   }
   .missing code { color: var(--accent-line); word-break: break-all; }
+
+
+
+  .wide p, .wide .eq { max-width: none; }
+  .eq { overflow-x: auto; overflow-y: hidden; margin: 16px 0; padding: 4px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); max-width: 900px; }
+
 
   .demo { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 16px; align-items: center; margin: 20px 0; }
   .demo .arrow { font-size: 32px; color: var(--accent-line); text-align: center; }
@@ -110,6 +125,21 @@
     background: var(--bg); font-size: 15px; color: var(--muted);
   }
   .prompt b { color: var(--text); font-weight: 600; }
+
+  /* Output short in an iPhone-style frame, like the 9:16 phone player in the demo app */
+  .phone {
+    position: relative; width: min(100% - 32px, 375px); margin: 4px auto 20px; padding: 14px;
+    border-radius: 65px; background: #020617; border: 2px solid var(--border);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, .45);
+  }
+  .phone::before, .phone::after { content: ""; position: absolute; width: 4px; border-radius: 2px; background: var(--border); }
+  .phone::before { left: -7px; top: 138px; height: 65px; box-shadow: 0 83px 0 var(--border); }  /* volume buttons */
+  .phone::after { right: -7px; top: 188px; height: 105px; }                                     /* side button */
+  .phone .island {
+    position: absolute; top: 28px; left: 50%; z-index: 1; width: 32%; height: 30px;
+    transform: translateX(-50%); border-radius: 15px; background: #000; pointer-events: none;
+  }
+  .card .phone video { aspect-ratio: 9 / 16; object-fit: cover; border-radius: 51px; background: #000; }
 
   .steps { counter-reset: s; list-style: none; padding: 0; margin: 20px 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
   .steps li { counter-increment: s; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; font-size: 16px; }
@@ -126,10 +156,11 @@
   <div class="wrap">
     <span class="brand">✂️🎬 VSLICE</span>
     <nav class="links">
-      <a href="#gallery"><span class="en">Gallery</span><span class="cn">示例</span></a>
-      <a href="#motivation"><span class="en">Motivation</span><span class="cn">动机</span></a>
-      <a href="#method"><span class="en">Method</span><span class="cn">算法</span></a>
+      <a href="#overview"><span class="en">Overview</span><span class="cn">概述</span></a>
       <a href="#demo"><span class="en">Demo</span><span class="cn">演示</span></a>
+      <a href="#motivation"><span class="en">Motivation</span><span class="cn">动机</span></a>
+      <a href="#method"><span class="en">Method</span><span class="cn">方法</span></a>
+      <a href="#gallery"><span class="en">Gallery</span><span class="cn">示例</span></a>
     </nav>
     <div class="lang-toggle" role="group" aria-label="Language">
       <button type="button" data-set-lang="en" aria-pressed="true">ENG</button>
@@ -141,18 +172,129 @@
 <main class="wrap">
 
   <div class="hero">
-    <h1>✂️🎬 VSLICE</h1>
-    <p class="subtitle">Binary Preference Alignment for Open-Ended Video Summarization with Large Vision-Language Models</p>
-    <p class="authors">Anonymous Authors · <span class="en">Paper under double-blind review</span><span class="cn">论文双盲评审中</span></p>
+    <p class="kicker">✂️🎬 VSLICE</p>
+    <h1 class="title">SLICE or DROP: Margin-Ranked Binary Preference Alignment for Video Summarization with Large Vision-Language Models</h1>
+    <p class="authors">Anonymous Authors</p>
     <div class="chips">
       <span class="chip disabled">📄 <span class="en">Paper (coming soon)</span><span class="cn">论文（即将发布）</span></span>
-      <span class="chip disabled">💻 <span class="en">Code (coming soon)</span><span class="cn">代码（即将发布）</span></span>
+      <a class="chip" href="https://anonymous.4open.science/r/VORD-C6A9" target="_blank" rel="noopener">💻 <span class="en">Anonymous Code</span><span class="cn">匿名代码</span></a>
     </div>
-    <p class="en" style="margin:24px auto 0">Welcome to the project showcase for VSLICE! Scroll down to understand the motivation, the algorithm, and see example outputs.</p>
-    <p class="cn" style="margin:24px auto 0">欢迎来到 VSLICE 的项目展示！请向下滚动以了解项目动机、算法，并查看示例输出。</p>
   </div>
 
-  <!-- SECTION 0: Gallery -->
+  <!-- Overview: abstract + application demo -->
+  <section id="overview">
+    <h2><span class="en">Overview</span><span class="cn">概述</span></h2>
+    <div class="grid cols-2" style="align-items:center">
+      <div>
+        <p class="en">Large Vision-Language Models (LVLMs) excel at semantic reasoning, but their zero-shot ability struggles with highlight detection because they are not aligned with what humans consider a “highlight”. VSLICE is a model alignment framework for open-ended video summarization. It constrains open-ended responses into a tractable binary state space to isolate target visual segments, then aligns those binary outputs with a <strong>Margin-Ranked Direct Preference Optimization (DPO)</strong> pipeline that preserves both the <em>order</em> and the <em>strength</em> of human preferences.</p>
+        <p class="cn">大型视觉语言模型 (LVLM) 擅长语义推理，但由于缺乏与人类“精彩片段”标准的对齐，其零样本能力在精彩片段检测上表现欠佳。VSLICE 是一个面向开放式视频摘要的模型对齐框架：它将开放式回答约束到可处理的二元状态空间，以分离目标视觉片段；再通过<strong>间隔排序直接偏好优化 (Margin-Ranked DPO)</strong> 流程对齐这些二元输出，同时保留人类偏好的<em>顺序</em>与<em>强度</em>。</p>
+      </div>
+      <figure class="card figure" style="margin:0">
+        <a class="fig" href="figures/vslice_fig1_main.png" target="_blank" rel="noopener"><img src="figures/vslice_fig1_main.png" alt="VSLICE teaser: distilling a long video into a short highlight summary" loading="lazy"></a>
+        <figcaption><span class="en">VSLICE distills long-form videos into short, engaging summaries. It uses an LVLM and binary decomposition to isolate the key highlights that best match a user-defined query.</span><span class="cn">VSLICE 将长视频提炼为简短而吸引人的摘要。它借助 LVLM 与二元分解，精准分离出与用户查询最匹配的关键精彩片段。</span></figcaption>
+      </figure>
+    </div>
+
+    <!-- Application demo (videos are precomputed outputs) -->
+    <div id="demo" class="wide">
+      <h3><span class="en">User Prompt-Driven Short Video Creation</span><span class="cn">提示驱动的短视频创作</span></h3>
+      <p class="en">Because VSLICE outputs a query-conditioned importance curve for every frame, it can drive editing directly. With a quantized MiniCPM-V the full pipeline runs on a single 8&nbsp;GB RTX 3070.</p>
+      <p class="cn">由于 VSLICE 能为每一帧生成以查询为条件的稠密重要性曲线，它可以直接驱动视频剪辑。使用量化的 MiniCPM-V，整个流程可在单张 8&nbsp;GB RTX 3070。</p>
+
+      <figure class="card figure">
+        <video id="demo-video" autoplay muted loop playsinline controls preload="metadata">
+          <source src="assets/demo_application2.mp4" type="video/mp4">
+        </video>
+      </figure>
+
+      <h3><span class="en">Example input and output</span><span class="cn">输入与输出示例</span></h3>
+      <div class="demo">
+        <div class="card">
+          <span class="label"><span class="en">Input Long Video</span><span class="cn">输入长视频</span></span>
+          <video controls muted playsinline preload="metadata">
+            <source src="assets/demo_input.mp4" type="video/mp4">
+          </video>
+          <div class="prompt">
+            <b class="en">User Prompt:</b><b class="cn">用户提示词：</b>
+            <span class="en">People sliding down the yellow ramp and flying into the blue pool.</span>
+            <span class="cn">人们沿黄色坡道滑下，飞入蓝色水池。</span>
+          </div>
+        </div>
+        <div class="arrow" aria-hidden="true">➜</div>
+        <div class="card">
+          <span class="label"><span class="en">Summarized Highlight Reel (Output)</span><span class="cn">摘要精彩片段集锦 (输出)</span></span>
+          <div class="phone">
+            <span class="island" aria-hidden="true"></span>
+            <video controls muted playsinline preload="metadata">
+              <source src="assets/demo_output.mp4#t=0.3" type="video/mp4">
+            </video>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 1. Motivation -->
+  <section id="motivation" class="wide">
+    <h2><span class="en">1. Motivation: Recognition Is Not Ranking</span><span class="cn">1. 动机：识别不等于排序</span></h2>
+
+    <p class="en">Caption-based summarizers such as LLMVS collapse video into static text, losing fine-grained spatio-temporal context, and their generated scores reflect sentence likelihood rather than visual importance. LVLMs tend to give high confidence to background scenes that share context with the query. We measure this with <em>preference accuracy</em>, the share of clip pairs (humans prefer \(v_c\) over \(v_r\), gap \(\Delta s = s_c - s_r\)) where the model is more confident on the preferred clip.</p>
+    <p class="cn">以 LLMVS 为代表的基于字幕的摘要方法将视频压缩为静态文本，丢失了细粒度的时空上下文，且其生成的分数反映的是句子的语言概率，而非视觉重要性。LVLM 则容易对与查询共享上下文的背景场景给出高置信度。我们用<em>偏好准确率</em>衡量这一现象，即在人类更偏好 \(v_c\) 而非 \(v_r\)（偏好差 \(\Delta s = s_c - s_r\)）的片段对中，模型对更受偏好片段给出更高置信度的比例。</p>
+
+    <figure class="card figure">
+      <a class="fig" href="figures/cvpr_combined_3subplot.png" target="_blank" rel="noopener"><img src="figures/cvpr_combined_3subplot.png" alt="Recognition vs. ranking discrepancy: preference accuracy by difficulty, by human preference gap, and by confidence" loading="lazy"></a>
+      <figcaption><span class="en"><b>Recognition vs. ranking discrepancy.</b> (a) Zero-shot preference accuracy collapses toward random choice on subtle differences. (b) Across the human preference gap, alignment gives consistent improvements over the whole difficulty spectrum. (c) Base models frequently pick the wrong clip at every confidence range.</span><span class="cn"><b>识别与排序之间的差异。</b>(a) 在细微差异上，零样本偏好准确率接近随机水平。(b) 在不同人类偏好差上，对齐在整个难度范围内都带来稳定提升。(c) 基础模型在各个置信度区间都经常选错片段。</span></figcaption>
+    </figure>
+
+    <p class="en">Base LVLMs separate coarse contrasts but fall toward chance on subtle ones, and the failure is not limited to low-confidence predictions: they still pick the less important segment in nearly <strong>36%</strong> of their <em>highest-confidence</em> comparisons. Their scores encode visual-text affinity, not relative highlight importance, so no global threshold can separate highlights from semantically related content. A summarizer has to capture the <strong>relative ordering</strong> of segments as humans see it, not only whether an event is present.</p>
+    <p class="cn">基础 LVLM 能区分粗粒度差异，但在细微差异上接近随机；而且这种失败并不局限于低置信度预测——即使在其<em>置信度最高</em>的比较中，仍有近 <strong>36%</strong> 选择了较不重要的片段。它们的分数反映的是视觉-文本亲和度，而非精彩程度的相对高低，因此任何全局阈值都无法将精彩片段与语义相关内容区分开。视频摘要不仅要识别事件是否出现，更要捕捉符合人类偏好的片段<strong>相对排序</strong>。</p>
+  </section>
+
+  <!-- 2. Method -->
+  <section id="method">
+    <h2><span class="en">2. Method</span><span class="cn">2. 方法</span></h2>
+    <p class="en">VSLICE turns LVLM summarization into a sequence of binary decisions, then learns those binary scores from human-graded preference pairs.</p>
+    <p class="cn">VSLICE 将 LVLM 视频摘要转化为一系列二元决策，并从人类分级的偏好对中学习这些二元分数。</p>
+
+    <figure class="card figure">
+      <a class="fig" href="figures/vslice_main.png" target="_blank" rel="noopener"><img src="figures/vslice_main.png" alt="VSLICE framework overview" loading="lazy"></a>
+      <figcaption><span class="en"><b>Framework overview.</b> Rank-sorted preference-pair prompts are projected into a tractable binary output space, and ranked binary margin preference optimization aligns model outputs to target highlight events.</span><span class="cn"><b>框架概览。</b>将按排序构造的偏好对提示投影到可处理的二元输出空间，并通过排序二元间隔偏好优化，使模型输出与目标精彩事件对齐。</span></figcaption>
+    </figure>
+
+    <h3><span class="en">2.1 Margin Preference-Pair Selection</span><span class="cn">2.1 间隔偏好对选择</span></h3>
+    <div class="grid cols-2" style="align-items:center">
+      <div>
+        <p class="en">Clips that elicit the same action can still differ in importance. Both the debate and Trump drinking water contain Trump and warrant <code class="tok">&lt;SLICE&gt;</code>, but annotators rate the debate higher, so that pair gets a small margin, while a Trump clip versus the flood scene gets a large one. VSLICE therefore keeps the <em>magnitude</em> of the human score difference, not just the order.</p>
+        <p class="cn">触发相同动作的片段，其重要性仍可能不同。辩论片段和特朗普喝水片段都包含特朗普、都应 <code class="tok">&lt;SLICE&gt;</code>，但标注者认为辩论更精彩，因此二者之间只有较小的间隔；而特朗普片段与洪水场景之间的差距则很大。因此 VSLICE 保留的是人类评分差异的<em>幅度</em>，而不仅仅是顺序。</p>
+      </div>
+      <figure class="card figure" style="margin:0">
+        <a class="fig scaled" href="figures/pref_pairs_figure.png" target="_blank" rel="noopener"><img src="figures/pref_pairs_figure.png" alt="Preference pairs with human-score margins" loading="lazy"></a>
+        <figcaption><span class="en">For a queried event, the model should <code class="tok">&lt;SLICE&gt;</code> chosen highlights and <code class="tok">&lt;DROP&gt;</code> irrelevant clips. Each pair carries a margin \(m_{(c,r)}\) set by the human scores, so stronger preferences require larger confidence gaps.</span><span class="cn">针对查询事件，模型应对选中的精彩片段输出 <code class="tok">&lt;SLICE&gt;</code>，对无关片段输出 <code class="tok">&lt;DROP&gt;</code>。每个片段对都带有由人类评分决定的间隔 \(m_{(c,r)}\)，偏好越强，所需的置信度差距越大。</span></figcaption>
+      </figure>
+    </div>
+    <ol class="steps">
+      <li><span class="en">Sort each training video's subclips by ground-truth highlight score.</span><span class="cn">按真实精彩度分数对每个训练视频的子片段排序。</span></li>
+      <li><span class="en">Take the top-\(j\) as chosen (peaks) and the bottom-\(j\) as rejected (valleys), with \(j \le |C|/2\).</span><span class="cn">取前 \(j\) 个作为选中集（峰值），后 \(j\) 个作为拒绝集（谷值），其中 \(j \le |C|/2\)。</span></li>
+      <li><span class="en">Pair the \(i\)-th chosen with the \(i\)-th rejected: early pairs have large gaps, later pairs approach the median and differ only slightly.</span><span class="cn">将第 \(i\) 个选中片段与第 \(i\) 个拒绝片段配对：靠前的片段对差距大，靠后的接近中位数、差异细微。</span></li>
+      <li><span class="en">Give each pair the log-ratio margin \(m_{(c,r)} = \log(s_c+\epsilon) - \log(s_r+\epsilon)\). All pairs come from the same video.</span><span class="cn">为每个片段对赋予对数比间隔 \(m_{(c,r)} = \log(s_c+\epsilon) - \log(s_r+\epsilon)\)。所有片段对均来自同一视频。</span></li>
+    </ol>
+
+    <h3><span class="en">2.2 Visual-Preference Alignment via Margin-DPO</span><span class="cn">2.2 基于 Margin-DPO 的视觉偏好对齐</span></h3>
+    <div class="wide">
+      <p class="en">Standard DPO compares two <em>text responses</em> under the same input. VSLICE instead compares two <em>visual states</em> (a chosen subclip \(v_c\) and a rejected subclip \(v_r\)) and treats the LVLM as a subclip-selection policy.
+      Because video summarization labels are continuous human importance scores, VSLICE subtracts the pair-specific margin inside a margin-ranked Bradley-Terry model, giving the final objective:
+      </p>
+      <p class="cn">标准 DPO 在同一输入下比较两个<em>文本回答</em>。VSLICE 则比较两个<em>视觉状态</em>（选中子片段 \(v_c\) 与拒绝子片段 \(v_r\)），并把 LVLM 视为一个子片段选择策略。由于视频摘要的标注是连续的人类重要性分数，VSLICE 在间隔排序 Bradley-Terry 模型中减去每个片段对特有的间隔，得到最终目标：</p>
+      <div class="eq">\[\mathcal{L}_{\text{Margin-DPO}} = -\log\sigma\!\left(\beta\left[\log\frac{\tilde{\pi}_\theta(y \mid v_c,x)}{\tilde{\pi}_{\text{ref}}(y \mid v_c,x)} - \log\frac{\tilde{\pi}_\theta(y \mid v_r,x)}{\tilde{\pi}_{\text{ref}}(y \mid v_r,x)} - m_{(c,r)}\right]\right)\]</div>
+      <p class="en"><strong>Margin as a score-ratio constraint.</strong> A pair meets its margin exactly when the aligned model's confidence ratio exceeds the reference model's by at least the human importance ratio:</p>
+      <p class="cn"><strong>间隔即分数比约束。</strong>当且仅当对齐后模型的置信度比值至少比参考模型高出人类重要性比值的倍数时，该片段对满足其间隔：</p>
+      <div class="eq">\[\frac{\tilde{\pi}_\theta(y \mid v_c,x)}{\tilde{\pi}_\theta(y \mid v_r,x)} \;\ge\; \frac{s_c+\epsilon}{s_r+\epsilon}\cdot\frac{\tilde{\pi}_{\text{ref}}(y \mid v_c,x)}{\tilde{\pi}_{\text{ref}}(y \mid v_r,x)}\]</div>
+      <p class="en">Confidences therefore follow the proportions of human importance relative to the reference. When the reference is already confident on \(v_c\), the margin can only be met by <strong>suppressing</strong> \(v_r\). The objective learns the order <em>and</em> the strength of each preference.</p>
+      <p class="cn">因此，相对于参考模型，置信度会遵循人类重要性的比例。当参考模型对 \(v_c\) 已经很有把握时，只能通过<strong>压低</strong> \(v_r\) 来满足间隔。该目标同时学习每个偏好的顺序<em>与</em>强度。</p>
+    </div>
+  </section>
+
+  <!-- Gallery -->
   <section id="gallery">
     <h2><span class="en">Demo Gallery (Summary Outputs)</span><span class="cn">示例图库</span></h2>
     <p class="en">Examples of video summaries that VSLICE can create. Click a video to unmute.</p>
@@ -165,104 +307,15 @@
         </video>
       </div>
       <div class="card">
-        <span class="label"><span class="en">Politics Example</span><span class="cn">政治示例</span></span>
+        <span class="label"><span class="en">Video Games Example 1</span><span class="cn">游戏示例 1</span></span>
         <video autoplay muted loop playsinline preload="metadata" controls>
           <source src="assets/full_highlights_1.mp4" type="video/mp4">
         </video>
       </div>
       <div class="card">
-        <span class="label"><span class="en">Video Games Example</span><span class="cn">游戏示例</span></span>
+        <span class="label"><span class="en">Video Games Example 2</span><span class="cn">游戏示例 2</span></span>
         <video autoplay muted loop playsinline preload="metadata" controls>
           <source src="assets/full_highlights_2.mp4" type="video/mp4">
-        </video>
-      </div>
-    </div>
-  </section>
-
-  <!-- SECTION 1: Motivation (figures from vslice/vslice_utils/plot_ranking.py and plot_figures.py) -->
-  <section id="motivation">
-    <h2><span class="en">1. Introduction &amp; Motivation</span><span class="cn">1. 简介与动机</span></h2>
-
-    <h3><span class="en">From Regression to Preference</span><span class="cn">从回归到偏好</span></h3>
-    <p class="en">Video summarization methods typically regress frame-level importance with a mean-squared-error loss or train reinforcement-learning agents. MSE treats every error alike, so it never prioritizes the <em>relative</em> order between key highlights and background clips, and standard vision backbones lack a high-level understanding of a video's theme. Large Vision-Language Models (LVLMs) bring that semantic understanding. VSLICE asks the LVLM one binary question per frame, <em>“Does this image show a key highlight from the video titled ‘{title}’?”</em>, and scores the frame by the gap between its <strong>Yes</strong> and <strong>No</strong> logits.</p>
-    <p class="cn">传统视频摘要方法通常使用均方误差 (MSE) 回归帧级重要性分数，或训练强化学习智能体。MSE 对所有误差一视同仁，无法优先学习关键精彩片段与背景片段之间的<em>相对</em>排序；而标准视觉骨干网络也缺乏对视频主题的高层语义理解。大型视觉语言模型 (LVLM) 恰好具备这种语义理解能力。VSLICE 对每一帧向 LVLM 提出一个二元问题——<em>“这张图像是否展示了标题为‘{title}’的视频中的关键精彩片段？”</em>——并以 <strong>Yes</strong> 与 <strong>No</strong> 逻辑值之差作为该帧的分数。</p>
-
-    <h3><span class="en">Recognition Is Not Ranking</span><span class="cn">识别不等于排序</span></h3>
-    <p class="en">Zero-shot LVLMs can tell a clear highlight from obvious background, but a summary is built from the <strong>top-ranked</strong> shots under a length budget, so what matters is fine-grained ordering. On pairs whose human scores differ only slightly, the zero-shot model ranks barely above chance (<strong>54.6%</strong>). Aligning it with margin-ranked binary preference optimization raises fine-grained accuracy to <strong>75.0%</strong>, and VSLICE stays ahead across the full range of difficulty.</p>
-    <p class="cn">零样本 LVLM 能够区分明显的精彩片段与背景，但摘要是在长度预算下由<strong>排名靠前</strong>的镜头组成的，因此真正关键的是细粒度排序。在人类评分仅有细微差异的片段对上，零样本模型的排序准确率仅略高于随机水平（<strong>54.6%</strong>）。通过间隔排序二元偏好优化进行对齐后，细粒度准确率提升至 <strong>75.0%</strong>，并且在所有难度区间上 VSLICE 均保持领先。</p>
-    <figure class="card figure" style="margin:20px 0">
-      <img src="assets/cvpr_combined_3subplot.png" alt="Recognition vs. ranking gap, accuracy vs. difficulty, and selective prediction" loading="lazy">
-      <figcaption><span class="en">Left: preference accuracy by difficulty tier (fine / moderate / coarse human gap). Centre: accuracy against the true human preference gap. Right: selective prediction, where accuracy is measured on the most confident pairs only.</span><span class="cn">左：按难度分层（细粒度 / 中等 / 粗粒度人类评分差）的偏好准确率。中：准确率随真实人类偏好差的变化。右：选择性预测，仅在置信度最高的片段对上计算准确率。</span></figcaption>
-    </figure>
-
-    <h3><span class="en">Confidence That Means Something</span><span class="cn">有意义的置信度</span></h3>
-    <p class="en">A useful scorer should be most accurate where it is most confident. When we keep only the pairs with the largest predicted score gap, VSLICE's accuracy rises monotonically from <strong>77.5%</strong> to <strong>83.9%</strong>, whereas the zero-shot model's accuracy <em>falls</em> from 68.3% to 64.0%. Its confidence does not track correctness.</p>
-    <p class="cn">一个可靠的打分器应当在最有把握时最准确。当只保留预测分数差最大的片段对时，VSLICE 的准确率从 <strong>77.5%</strong> 单调提升至 <strong>83.9%</strong>，而零样本模型的准确率反而从 68.3% <em>下降</em>到 64.0%——它的置信度与正确性并不一致。</p>
-
-    <h3><span class="en">Fixing Errors Without Breaking What Works</span><span class="cn">修正错误，而不破坏已有能力</span></h3>
-    <div class="grid cols-2" style="align-items:center">
-      <div>
-        <p class="en">Alignment rescues <strong>57.7%</strong> of the pairs the zero-shot model ranked wrongly, while retaining <strong>93.3%</strong> of the pairs it already ranked correctly. VSLICE sharpens the LVLM's existing judgement rather than overwriting it.</p>
-        <p class="cn">对齐后，零样本模型排错的片段对中有 <strong>57.7%</strong> 被纠正，同时其原本排对的片段对中有 <strong>93.3%</strong> 得以保留。VSLICE 是在强化 LVLM 已有的判断力，而不是将其覆盖。</p>
-      </div>
-      <figure class="card figure tall" style="margin:0">
-        <img src="assets/cvpr_fig3_ranking_state_rescue.png" alt="Ranking error rescue flow" loading="lazy">
-        <figcaption><span class="en">Ranking error rescue flow: zero-shot errors that are rescued vs. unresolved, and zero-shot correct pairs that are retained vs. regressed.</span><span class="cn">排序错误纠正流：零样本错误中被纠正与未解决的比例，以及零样本正确对中被保留与退化的比例。</span></figcaption>
-      </figure>
-    </div>
-
-    <h3><span class="en">Why a Margin?</span><span class="cn">为什么需要间隔？</span></h3>
-    <p class="en">Standard DPO treats every chosen/rejected pair as equally different. VSLICE subtracts the ground-truth log-margin between the two clips from the implicit reward, so pairs with a larger human gap must be separated further. In training, adding the margin reaches a larger separation for less KL drift from the reference model, on both MiniCPM-V and Qwen2-VL.</p>
-    <p class="cn">标准 DPO 将每一组选中/拒绝片段对视为差异相同。VSLICE 在隐式奖励中减去两段片段之间的真实对数间隔，使人类评分差距越大的片段对需要被拉开得越远。训练中，在 MiniCPM-V 与 Qwen2-VL 上，加入间隔后都能以更小的相对参考模型的 KL 漂移获得更大的分离间隔。</p>
-    <figure class="card figure" style="margin:20px 0">
-      <img src="assets/vslice_combined.png" alt="Training dynamics of DPO with and without margin" loading="lazy">
-      <figcaption><span class="en">Training dynamics of DPO vs. DPO + Margin: loss, KL divergence, separation margin, and KL divergence against separation margin.</span><span class="cn">DPO 与 DPO + 间隔的训练动态：损失、KL 散度、分离间隔，以及 KL 散度相对分离间隔的变化。</span></figcaption>
-    </figure>
-  </section>
-
-  <!-- SECTION 2: Algorithm -->
-  <section id="method">
-    <h2><span class="en">2. Algorithm: Graph-DPO</span><span class="cn">2. 算法：Graph-DPO</span></h2>
-    <h3><span class="en">Direct Preference Optimization on Graphs</span><span class="cn">图上的直接偏好优化 (DPO)</span></h3>
-    <p class="en">To solve the alignment issue and temporal fragmentation natively, we introduce <strong>Graph-DPO</strong>. By injecting a visual-temporal similarity graph directly into the DPO training loop, the policy learns to output aligned, temporally coherent scores without smearing false positives.</p>
-    <p class="cn">为了从根本上解决对齐问题和时间碎片化，我们引入了 <strong>Graph-DPO</strong>。通过将视觉-时间相似度图直接注入到 DPO 训练循环中，策略学习输出对齐的、时间连贯的分数，而不会涂抹误报。</p>
-
-    <figure class="card figure" style="margin:20px 0">
-      <img src="assets/main_figure.jpg" alt="VSLICE overview" loading="lazy">
-      <figcaption><span class="en">Overview of the VSLICE training and inference pipeline.</span><span class="cn">VSLICE 训练与推理流程概览。</span></figcaption>
-    </figure>
-
-    <ol class="steps">
-      <li><span class="en">Ask the LVLM a binary question per frame: <em>“Does this image show a key highlight?”</em> and score it by the Yes/No logit gap.</span><span class="cn">对每一帧向 LVLM 提出二元问题：<em>“这张图像是否展示了关键精彩片段？”</em>，并以 Yes/No 逻辑值差作为分数。</span></li>
-      <li><span class="en">Mine preference pairs: peak clips (chosen) vs. valley clips (rejected), with a ground-truth margin.</span><span class="cn">挖掘偏好对：高分片段（选中）与低分片段（拒绝），并附带真实分数间隔。</span></li>
-      <li><span class="en">Fine-tune LoRA adapters with the preference objective against a frozen reference model.</span><span class="cn">以冻结的参考模型为基准，使用偏好目标微调 LoRA 适配器。</span></li>
-      <li><span class="en">Select summary shots with knapsack dynamic programming under a length budget.</span><span class="cn">在长度预算下使用背包动态规划选择摘要镜头。</span></li>
-    </ol>
-  </section>
-
-  <!-- SECTION 3: Demo (precomputed; replaces the mock upload in app.py) -->
-  <section id="demo">
-    <h2><span class="en">3. Example Outputs (Demo)</span><span class="cn">3. 示例输出 (演示)</span></h2>
-    <p class="en">Precomputed outputs of the Graph-DPO aligned model: a long input video and the highlight reel it produces for the given prompt.</p>
-    <p class="cn">Graph-DPO 对齐模型的预计算输出：长输入视频，以及模型根据给定提示词生成的精彩片段集锦。</p>
-
-    <div class="demo">
-      <div class="card">
-        <span class="label"><span class="en">Input Long Video</span><span class="cn">输入长视频</span></span>
-        <video controls muted playsinline preload="metadata">
-          <source src="assets/demo_input.mp4" type="video/mp4">
-        </video>
-        <div class="prompt">
-          <b class="en">User Prompt:</b><b class="cn">用户提示词：</b>
-          <span class="en">Extract the most exciting action highlights from this video.</span>
-          <span class="cn">提取这个视频中最激动人心的动作精彩片段。</span>
-        </div>
-      </div>
-      <div class="arrow" aria-hidden="true">➜</div>
-      <div class="card">
-        <span class="label"><span class="en">Summarized Highlight Reel (Output)</span><span class="cn">摘要精彩片段集锦 (输出)</span></span>
-        <video controls muted playsinline preload="metadata">
-          <source src="assets/demo_output.mp4" type="video/mp4">
         </video>
       </div>
     </div>
@@ -271,9 +324,10 @@
   <section id="cite">
     <h2>BibTeX</h2>
     <pre class="bibtex">@article{vslice2026,
-  title   = {VSLICE: Binary Preference Alignment for Open-Ended Video
-             Summarization with Large Vision-Language Models},
+  title   = {SLICE or DROP: Margin-Ranked Binary Preference Alignment for
+             Video Summarization with Large Vision-Language Models},
   author  = {Anonymous},
+  note    = {Under review},
   year    = {2026}
 }</pre>
   </section>
@@ -284,6 +338,8 @@
   <span class="cn">匿名项目主页 · MIT 许可</span>
 </footer>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
 <script>
   // Language toggle (replaces the gr.Radio + switch_lang in app.py)
   (function () {
@@ -301,18 +357,50 @@
     if (saved === 'cn' || saved === 'en') setLang(saved);
   })();
 
-  // Swap any image/video whose file is missing for a placeholder naming the expected path
+  // Typeset \( \) and \[ \] math
+  if (window.renderMathInElement) {
+    renderMathInElement(document.body, {
+      delimiters: [{ left: '\\[', right: '\\]', display: true }, { left: '\\(', right: '\\)', display: false }],
+      throwOnError: false
+    });
+  }
+
+  // Section 3 walkthrough: play with sound once it scrolls into view. Browsers block unmuted autoplay until the
+  // visitor has interacted with the page, so fall back to muted playback and unmute on the first click or key press.
   (function () {
-    function placeholder(el, src) {
-      var box = document.createElement('div');
-      box.className = 'missing';
-      box.innerHTML = '<span>Missing asset</span><code></code>';
-      box.querySelector('code').textContent = src;
-      el.replaceWith(box);
+    var v = document.getElementById('demo-video');
+    if (!v || !('IntersectionObserver' in window)) return;
+    var wantSound = true, ours = false, seen = false, visible = false;
+    function setMuted(m) { ours = true; v.muted = m; ours = false; }
+    v.addEventListener('volumechange', function () { if (!ours && v.muted) wantSound = false; });  // visitor muted it
+    function playWithSound() {
+      setMuted(!wantSound);
+      v.play().catch(function () { setMuted(true); v.play().catch(function () {}); });
     }
+    ['pointerdown', 'keydown', 'touchend'].forEach(function (type) {
+      document.addEventListener(type, function () { if (visible && wantSound && v.muted) playWithSound(); }, true);
+    });
+    new IntersectionObserver(function (entries) {
+      visible = entries[0].isIntersecting;
+      if (!visible) return v.pause();
+      if (!seen) { seen = true; v.currentTime = 0; }
+      playWithSound();
+    }, { threshold: 0.5 }).observe(v);
+  })();
+
+  // Swap any image/video that cannot be loaded for a placeholder naming the expected path
+  function placeholder(el, src) {
+    var box = document.createElement('div');
+    box.className = 'missing';
+    box.innerHTML = '<span>Missing asset</span><code></code>';
+    box.querySelector('code').textContent = src;
+    el.replaceWith(box);
+  }
+  (function () {
     document.querySelectorAll('img').forEach(function (img) {
       var src = img.getAttribute('src');
-      if (img.complete && img.naturalWidth === 0) placeholder(img, src);
+      // Lazy images that have not started loading also report naturalWidth 0, so leave those to the error event
+      if (img.loading !== 'lazy' && img.complete && img.naturalWidth === 0) placeholder(img, src);
       else img.addEventListener('error', function () { placeholder(img, src); });
     });
     document.querySelectorAll('video').forEach(function (video) {

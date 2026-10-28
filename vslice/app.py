@@ -25,9 +25,9 @@ fig_bin_strength = "./assets/fig2_bin_strength.png"
 fig_posthoc = "./assets/fig4_posthoc_graph_failure.png"
 
 # Placeholders for example Videos
-video_example1 = "./assets/full_highlights_0.mp4"
-video_example2 = "./assets/full_highlights_1.mp4"
-video_example3 = "./assets/full_highlights_2.mp4"
+video_example1 = "./docs/assets/full_highlights_0.mp4"
+video_example2 = "./docs/assets/full_highlights_1.mp4"
+video_example3 = "./docs/assets/full_highlights_2.mp4"
 
 def build_content(lang):
     if lang == "EN":

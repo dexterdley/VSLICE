@@ -53,7 +53,7 @@ Traditional video summarization methods typically rely on supervised regression 
 The core algorithm is implemented in [`vslice/vslice_dpo.py`](vslice/vslice_dpo.py) (illustrated in the main figure below). The training and evaluation pipeline proceeds through five key stages:
 
 <p align="center">
-  <img src="assets/main_figure.png" alt="VSLICE Overview" width="100%">
+  <img src="docs/assets/main_figure.png" alt="VSLICE Overview" width="100%">
 </p>
 
 ```
