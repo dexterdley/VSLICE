@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VSLICE</title>
+<meta name="description" content="VSLICE: Binary Preference Alignment for Open-Ended Video Summarization with Large Vision-Language Models">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Palette carried over from the gr.themes.Glass overrides in vslice/app.py */
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --border: #334155;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --faint: #64748b;
+    --accent: #0284c7;
+    --accent-hover: #0369a1;
+    --accent-line: #38bdf8;
+    --radius: 12px;
+    --maxw: 1180px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 18px/1.6 "Inconsolata", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Language switching: everything bilingual is tagged .en or .cn */
+  html[data-lang="en"] .cn, html[data-lang="cn"] .en { display: none !important; }
+
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 16px; }
+
+  header.top {
+    position: sticky; top: 0; z-index: 10;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  header.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 56px; }
+  .brand { font-weight: 700; letter-spacing: .02em; }
+  nav.links { display: flex; gap: 20px; font-size: 15px; }
+  nav.links a { color: var(--muted); text-decoration: none; }
+  nav.links a:hover { color: var(--text); }
+
+  .lang-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; flex-shrink: 0; }
+  .lang-toggle button {
+    font: inherit; font-size: 15px; padding: 4px 14px; border: 0; cursor: pointer;
+    background: var(--surface); color: var(--text);
+  }
+  .lang-toggle button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+
+  .hero { padding: 64px 0 32px; text-align: center; }
+  .hero h1 { font-size: clamp(28px, 4.5vw, 46px); line-height: 1.15; margin: 0 0 16px; }
+  .hero .subtitle { font-size: clamp(17px, 2vw, 22px); color: var(--muted); max-width: 860px; margin: 0 auto 20px; }
+  .hero .authors { color: var(--faint); font-size: 16px; margin: 0 0 24px; }
+  .chips { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px;
+    border: 1px solid var(--border); border-radius: 999px; background: var(--surface);
+    color: var(--text); text-decoration: none; font-size: 15px;
+  }
+  .chip:hover { border-color: var(--accent-line); }
+  .chip.disabled { color: var(--faint); pointer-events: none; }
+
+  section { padding: 40px 0; border-top: 1px solid var(--border); }
+  section h2 { font-size: 30px; margin: 0 0 8px; }
+  section h3 { font-size: 22px; margin: 32px 0 8px; color: var(--accent-line); }
+  section p { max-width: 900px; margin: 0 0 16px; }
+  strong { color: #fff; }
+
+  .grid { display: grid; gap: 16px; margin: 20px 0; }
+  .grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 820px) {
+    .grid.cols-3, .grid.cols-2 { grid-template-columns: 1fr; }
+    nav.links { display: none; }
+  }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .card .label {
+    display: inline-block; margin: 10px 12px; padding: 2px 10px; border-radius: 6px;
+    background: var(--border); font-size: 14px;
+  }
+  .card video, .card img { display: block; width: 100%; height: auto; background: #000; }
+  .card.figure img { background: #fff; }
+  .card.figure.tall img { max-height: 360px; object-fit: contain; }
+  figcaption { padding: 10px 14px 14px; color: var(--muted); font-size: 15px; }
+
+  /* Shown in place of any image/video whose file is missing */
+  .missing {
+    display: flex; flex-direction: column; gap: 6px; align-items: center; justify-content: center; text-align: center;
+    min-height: 200px; padding: 16px; color: var(--faint); font-size: 14px;
+    background: repeating-linear-gradient(45deg, var(--bg), var(--bg) 10px, var(--surface) 10px, var(--surface) 20px);
+  }
+  .missing code { color: var(--accent-line); word-break: break-all; }
+
+  .demo { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 16px; align-items: center; margin: 20px 0; }
+  .demo .arrow { font-size: 32px; color: var(--accent-line); text-align: center; }
+  @media (max-width: 820px) { .demo { grid-template-columns: 1fr; } .demo .arrow { transform: rotate(90deg); } }
+  .prompt {
+    margin: 0 12px 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--bg); font-size: 15px; color: var(--muted);
+  }
+  .prompt b { color: var(--text); font-weight: 600; }
+
+  .steps { counter-reset: s; list-style: none; padding: 0; margin: 20px 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .steps li { counter-increment: s; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; font-size: 16px; }
+  .steps li::before { content: counter(s); display: inline-grid; place-items: center; width: 26px; height: 26px; margin-right: 8px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; font-size: 14px; }
+
+  pre.bibtex { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; overflow-x: auto; font-size: 15px; color: var(--muted); }
+
+  footer { padding: 32px 0 48px; color: var(--faint); font-size: 14px; text-align: center; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <span class="brand">✂️🎬 VSLICE</span>
+    <nav class="links">
+      <a href="#gallery"><span class="en">Gallery</span><span class="cn">示例</span></a>
+      <a href="#motivation"><span class="en">Motivation</span><span class="cn">动机</span></a>
+      <a href="#method"><span class="en">Method</span><span class="cn">算法</span></a>
+      <a href="#demo"><span class="en">Demo</span><span class="cn">演示</span></a>
+    </nav>
+    <div class="lang-toggle" role="group" aria-label="Language">
+      <button type="button" data-set-lang="en" aria-pressed="true">ENG</button>
+      <button type="button" data-set-lang="cn" aria-pressed="false">中文</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="hero">
+    <h1>✂️🎬 VSLICE</h1>
+    <p class="subtitle">Binary Preference Alignment for Open-Ended Video Summarization with Large Vision-Language Models</p>
+    <p class="authors">Anonymous Authors · <span class="en">Paper under double-blind review</span><span class="cn">论文双盲评审中</span></p>
+    <div class="chips">
+      <span class="chip disabled">📄 <span class="en">Paper (coming soon)</span><span class="cn">论文（即将发布）</span></span>
+      <span class="chip disabled">💻 <span class="en">Code (coming soon)</span><span class="cn">代码（即将发布）</span></span>
+    </div>
+    <p class="en" style="margin:24px auto 0">Welcome to the project showcase for VSLICE! Scroll down to understand the motivation, the algorithm, and see example outputs.</p>
+    <p class="cn" style="margin:24px auto 0">欢迎来到 VSLICE 的项目展示！请向下滚动以了解项目动机、算法，并查看示例输出。</p>
+  </div>
+
+  <!-- SECTION 0: Gallery -->
+  <section id="gallery">
+    <h2><span class="en">Demo Gallery (Summary Outputs)</span><span class="cn">示例图库</span></h2>
+    <p class="en">Examples of video summaries that VSLICE can create. Click a video to unmute.</p>
+    <p class="cn">VSLICE 生成的视频摘要示例。点击视频可开启声音。</p>
+    <div class="grid cols-3">
+      <div class="card">
+        <span class="label"><span class="en">Sports Example</span><span class="cn">体育示例</span></span>
+        <video autoplay muted loop playsinline preload="metadata" controls>
+          <source src="assets/full_highlights_0.mp4" type="video/mp4">
+        </video>
+      </div>
+      <div class="card">
+        <span class="label"><span class="en">Politics Example</span><span class="cn">政治示例</span></span>
+        <video autoplay muted loop playsinline preload="metadata" controls>
+          <source src="assets/full_highlights_1.mp4" type="video/mp4">
+        </video>
+      </div>
+      <div class="card">
+        <span class="label"><span class="en">Video Games Example</span><span class="cn">游戏示例</span></span>
+        <video autoplay muted loop playsinline preload="metadata" controls>
+          <source src="assets/full_highlights_2.mp4" type="video/mp4">
+        </video>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 1: Motivation -->
+  <section id="motivation">
+    <h2><span class="en">1. Introduction &amp; Motivation</span><span class="cn">1. 简介与动机</span></h2>
+
+    <h3><span class="en">The Problem: LVLM Misalignment &amp; Overconfidence</span><span class="cn">问题：LVLM 的不对齐与过度自信</span></h3>
+    <p class="en">Although Large Vision-Language Models (LVLMs) possess strong semantic recognition ability, their raw confidence scores are poorly calibrated for highlight localization. Reliability diagrams reveal that they suffer from massive overconfidence on non-highlight background frames, manifesting as a persistent <strong>Human Misalignment Gap</strong>.</p>
+    <p class="cn">尽管大型视觉语言模型 (LVLM) 具有强大的语义识别能力，但它们的原始置信度分数在精彩片段定位方面的校准效果很差。它们在背景帧上表现出极度的过度自信，导致了巨大的<strong>人类偏好不对齐差距 (Misalignment Gap)</strong>。</p>
+
+    <div class="grid cols-3">
+      <figure class="card figure tall" style="margin:0">
+        <img src="assets/fig1_misalignment_real.png" alt="Highlight misalignment" loading="lazy">
+        <figcaption><span class="en">Highlight Misalignment</span><span class="cn">高亮不对齐分析</span></figcaption>
+      </figure>
+      <figure class="card figure tall" style="margin:0">
+        <img src="assets/fig1_reliability_split.png" alt="Reliability diagram" loading="lazy">
+        <figcaption><span class="en">Reliability Diagram (LVLM Overconfidence)</span><span class="cn">可靠性图 (LVLM 过度自信)</span></figcaption>
+      </figure>
+      <figure class="card figure tall" style="margin:0">
+        <img src="assets/fig2_bin_strength.png" alt="Bin-strength plot" loading="lazy">
+        <figcaption><span class="en">Bin-Strength Plot</span><span class="cn">分箱强度图</span></figcaption>
+      </figure>
+    </div>
+
+    <h3><span class="en">The Post-Hoc Smoothing Trap</span><span class="cn">事后平滑陷阱</span></h3>
+    <p class="en">A naive solution to temporal fragmentation is to apply a post-hoc graph or temporal smoothing to the raw logits. However, because the zero-shot policy is fundamentally misaligned, post-hoc smoothing simply <strong>smears the overconfident false positives</strong> across adjacent frames, completely destroying precision.</p>
+    <p class="cn">解决时间碎片化的一种天真方法是对原始逻辑值进行事后的图平滑或时间平滑。然而，由于零样本策略在根本上就是不对齐的，事后平滑只会<strong>将过度自信的误报涂抹</strong>到相邻帧上，从而彻底破坏准确率。</p>
+    <figure class="card figure" style="margin:20px 0">
+      <img src="assets/fig4_posthoc_graph_failure.png" alt="Post-hoc graph smoothing failure" loading="lazy">
+      <figcaption><span class="en">The Post-Hoc Graph Smoothing Failure</span><span class="cn">事后图平滑失效</span></figcaption>
+    </figure>
+  </section>
+
+  <!-- SECTION 2: Algorithm -->
+  <section id="method">
+    <h2><span class="en">2. Algorithm: Graph-DPO</span><span class="cn">2. 算法：Graph-DPO</span></h2>
+    <h3><span class="en">Direct Preference Optimization on Graphs</span><span class="cn">图上的直接偏好优化 (DPO)</span></h3>
+    <p class="en">To solve the alignment issue and temporal fragmentation natively, we introduce <strong>Graph-DPO</strong>. By injecting a visual-temporal similarity graph directly into the DPO training loop, the policy learns to output aligned, temporally coherent scores without smearing false positives.</p>
+    <p class="cn">为了从根本上解决对齐问题和时间碎片化，我们引入了 <strong>Graph-DPO</strong>。通过将视觉-时间相似度图直接注入到 DPO 训练循环中，策略学习输出对齐的、时间连贯的分数，而不会涂抹误报。</p>
+
+    <figure class="card figure" style="margin:20px 0">
+      <img src="assets/main_figure.jpg" alt="VSLICE overview" loading="lazy">
+      <figcaption><span class="en">Overview of the VSLICE training and inference pipeline.</span><span class="cn">VSLICE 训练与推理流程概览。</span></figcaption>
+    </figure>
+
+    <ol class="steps">
+      <li><span class="en">Ask the LVLM a binary question per frame: <em>“Does this image show a key highlight?”</em> and score it by the Yes/No logit gap.</span><span class="cn">对每一帧向 LVLM 提出二元问题：<em>“这张图像是否展示了关键精彩片段？”</em>，并以 Yes/No 逻辑值差作为分数。</span></li>
+      <li><span class="en">Mine preference pairs: peak clips (chosen) vs. valley clips (rejected), with a ground-truth margin.</span><span class="cn">挖掘偏好对：高分片段（选中）与低分片段（拒绝），并附带真实分数间隔。</span></li>
+      <li><span class="en">Fine-tune LoRA adapters with the preference objective against a frozen reference model.</span><span class="cn">以冻结的参考模型为基准，使用偏好目标微调 LoRA 适配器。</span></li>
+      <li><span class="en">Select summary shots with knapsack dynamic programming under a length budget.</span><span class="cn">在长度预算下使用背包动态规划选择摘要镜头。</span></li>
+    </ol>
+  </section>
+
+  <!-- SECTION 3: Demo (precomputed; replaces the mock upload in app.py) -->
+  <section id="demo">
+    <h2><span class="en">3. Example Outputs (Demo)</span><span class="cn">3. 示例输出 (演示)</span></h2>
+    <p class="en">Precomputed outputs of the Graph-DPO aligned model: a long input video and the highlight reel it produces for the given prompt.</p>
+    <p class="cn">Graph-DPO 对齐模型的预计算输出：长输入视频，以及模型根据给定提示词生成的精彩片段集锦。</p>
+
+    <div class="demo">
+      <div class="card">
+        <span class="label"><span class="en">Input Long Video</span><span class="cn">输入长视频</span></span>
+        <video controls muted playsinline preload="metadata">
+          <source src="assets/demo_input.mp4" type="video/mp4">
+        </video>
+        <div class="prompt">
+          <b class="en">User Prompt:</b><b class="cn">用户提示词：</b>
+          <span class="en">Extract the most exciting action highlights from this video.</span>
+          <span class="cn">提取这个视频中最激动人心的动作精彩片段。</span>
+        </div>
+      </div>
+      <div class="arrow" aria-hidden="true">➜</div>
+      <div class="card">
+        <span class="label"><span class="en">Summarized Highlight Reel (Output)</span><span class="cn">摘要精彩片段集锦 (输出)</span></span>
+        <video controls muted playsinline preload="metadata">
+          <source src="assets/demo_output.mp4" type="video/mp4">
+        </video>
+      </div>
+    </div>
+  </section>
+
+  <section id="cite">
+    <h2>BibTeX</h2>
+    <pre class="bibtex">@article{vslice2026,
+  title   = {VSLICE: Binary Preference Alignment for Open-Ended Video
+             Summarization with Large Vision-Language Models},
+  author  = {Anonymous},
+  year    = {2026}
+}</pre>
+  </section>
+</main>
+
+<footer>
+  <span class="en">Anonymous project page · Licensed under MIT</span>
+  <span class="cn">匿名项目主页 · MIT 许可</span>
+</footer>
+
+<script>
+  // Language toggle (replaces the gr.Radio + switch_lang in app.py)
+  (function () {
+    var root = document.documentElement;
+    var buttons = document.querySelectorAll('[data-set-lang]');
+    function setLang(lang) {
+      root.setAttribute('data-lang', lang);
+      root.setAttribute('lang', lang === 'cn' ? 'zh-CN' : 'en');
+      buttons.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.setLang === lang)); });
+      try { localStorage.setItem('vslice-lang', lang); } catch (e) {}
+    }
+    buttons.forEach(function (b) { b.addEventListener('click', function () { setLang(b.dataset.setLang); }); });
+    var saved = null;
+    try { saved = localStorage.getItem('vslice-lang'); } catch (e) {}
+    if (saved === 'cn' || saved === 'en') setLang(saved);
+  })();
+
+  // Swap any image/video whose file is missing for a placeholder naming the expected path
+  (function () {
+    function placeholder(el, src) {
+      var box = document.createElement('div');
+      box.className = 'missing';
+      box.innerHTML = '<span>Missing asset</span><code></code>';
+      box.querySelector('code').textContent = src;
+      el.replaceWith(box);
+    }
+    document.querySelectorAll('img').forEach(function (img) {
+      var src = img.getAttribute('src');
+      if (img.complete && img.naturalWidth === 0) placeholder(img, src);
+      else img.addEventListener('error', function () { placeholder(img, src); });
+    });
+    document.querySelectorAll('video').forEach(function (video) {
+      var sources = video.querySelectorAll('source');
+      var last = sources[sources.length - 1];
+      if (!last) return;
+      if (video.networkState === HTMLMediaElement.NETWORK_NO_SOURCE) return placeholder(video, last.getAttribute('src'));
+      last.addEventListener('error', function () { placeholder(video, last.getAttribute('src')); });
+    });
+  })();
+</script>
+</body>
+</html>
